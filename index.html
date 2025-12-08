@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="fi">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Omakotitalon sähkönkulutus – 10 päivän infografiikka</title>
+  <style>
+    :root{
+      --bg:#0b0f14;
+      --card:#121823;
+      --fg:#e9eef6;
+      --muted:#a6b3c4;
+      --accent:#6bb3ff;
+      --accent-2:#8bffcf;
+      --ring: rgba(107,179,255,.25);
+      --radius: 18px;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0; background:var(--bg); color:var(--fg);
+      font:16px/1.55 system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, sans-serif;
+    }
+    .wrap{max-width:980px; margin:0 auto; padding:28px 18px 60px;}
+    header{display:flex; flex-direction:column; gap:8px; margin-bottom:22px;}
+    h1{font-size:clamp(28px, 4vw, 40px); margin:0; letter-spacing:.2px;}
+    .sub{color:var(--muted); max-width:60ch;}
+
+    .grid{
+      display:grid; gap:14px;
+      grid-template-columns: repeat(12, 1fr);
+    }
+    .card{
+      background: linear-gradient(180deg, rgba(255,255,255,.02), transparent), var(--card);
+      border:1px solid rgba(255,255,255,.06);
+      border-radius:var(--radius);
+      padding:18px 18px 14px;
+      box-shadow: 0 0 0 1px rgba(255,255,255,.02), 0 14px 40px rgba(0,0,0,.35);
+    }
+    .kpi{grid-column: span 4;}
+    .wide{grid-column: span 12;}
+    .half{grid-column: span 6;}
+
+    .label{color:var(--muted); font-size:12px; letter-spacing:.08em; text-transform:uppercase;}
+    .big{
+      font-size: clamp(28px, 3.2vw, 34px);
+      font-weight: 700; margin-top:6px;
+      display:flex; align-items:baseline; gap:8px;
+    }
+    .unit{color:var(--muted); font-weight:500; font-size:.6em;}
+    .hint{color:var(--muted); font-size:13px;}
+
+    .bar-row{
+      display:grid; grid-template-columns: 140px 1fr 64px;
+      gap:10px; align-items:center; padding:8px 0;
+      border-bottom:1px dashed rgba(255,255,255,.06);
+    }
+    .bar-row:last-child{border-bottom:none;}
+    .bar{
+      height:10px; border-radius:999px;
+      background: rgba(255,255,255,.06);
+      overflow:hidden;
+      position:relative;
+    }
+    .bar > span{
+      position:absolute; inset:0 auto 0 0;
+      width:0%;
+      background: linear-gradient(90deg, var(--accent), var(--accent-2));
+      border-radius:999px;
+      box-shadow: 0 0 0 1px var(--ring);
+      transition: width 900ms cubic-bezier(.2,.8,.2,1);
+    }
+
+    .section-title{
+      display:flex; align-items:center; justify-content:space-between;
+      margin:0 0 10px 0;
+    }
+    .section-title h2{font-size:18px; margin:0;}
+
+    @media (max-width: 900px){
+      .kpi{grid-column: span 6;}
+      .half{grid-column: span 12;}
+    }
+    @media (max-width: 520px){
+      .kpi{grid-column: span 12;}
+      .bar-row{grid-template-columns: 1fr;}
+      .bar-row .name{font-weight:600;}
+      .bar-row .value{justify-self:start;}
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div class="label">Omakotitalon energiatarina</div>
+      <h1>10 päivän sähkönkulutus tiiviinä datatarinana</h1>
+      <div class="sub">
+        Työnäytepohja tiedon visualisointiin. Korvaa esimerkkidata omalla Tapo- tai Home Assistant -datalla.
+      </div>
+    </header>
+
+    <section class="grid">
+      <div class="card kpi">
+        <div class="label">Kokonaiskulutus</div>
+        <div class="big"><span id="totalKwh">0</span><span class="unit">kWh / 10 pv</span></div>
+        <div class="hint" id="avgDayHint"></div>
+      </div>
+
+      <div class="card kpi">
+        <div class="label">Keskimääräinen päivä</div>
+        <div class="big"><span id="avgKwh">0</span><span class="unit">kWh / pv</span></div>
+        <div class="hint">Hyvä vertailuluku talven ja kesän välillä.</div>
+      </div>
+
+      <div class="card kpi">
+        <div class="label">Peruskuorma-arvio</div>
+        <div class="big"><span id="baseLoad">0</span><span class="unit">W</span></div>
+        <div class="hint">Arvio yöajan pienimmistä tuntikeskiarvoista.</div>
+      </div>
+
+      <div class="card half">
+        <div class="section-title">
+          <h2>Top-laitteet</h2>
+          <span class="label">osuus 10 pv</span>
+        </div>
+        <div id="barList"></div>
+      </div>
+
+      <div class="card half">
+        <div class="section-title">
+          <h2>Päivärytmi (24h keskiarvo)</h2>
+          <span class="label">kWh / tunti</span>
+        </div>
+        <svg id="lineSvg" viewBox="0 0 520 220" width="100%" height="220" role="img" aria-label="Sähkönkulutuksen 24 tunnin keskiarvokäyrä">
+          <rect x="0" y="0" width="520" height="220" fill="transparent"></rect>
+          <g id="gridLines"></g>
+          <path id="linePath" d="" fill="none" stroke="currentColor" stroke-width="3" style="color: var(--accent)"></path>
+          <path id="lineGlow" d="" fill="none" stroke="currentColor" stroke-width="8" opacity="0.10" style="color: var(--accent)"></path>
+        </svg>
+        <div class="hint">Tavoite: tehdä kulutuksen piikit nopeasti ymmärrettäviksi.</div>
+      </div>
+
+      <div class="card wide">
+        <div class="section-title">
+          <h2>3 havaintoa ja toimenpide-ideaa</h2>
+        </div>
+        <ul class="hint" style="margin-top:0">
+          <li><strong>Peruskuorma:</strong> jos arvo tuntuu korkealta, etsi aina päällä olevat laitteet ja ajastettavat kuormat.</li>
+          <li><strong>Aamupiikki:</strong> yhdistä lämpö, keittiö ja lämmin vesi samaan tarinaan ja testaa porrastusta.</li>
+          <li><strong>Viihde/työhuone:</strong> Tapo-pistorasiat sopivat hyvin “pienten mutta jatkuvien” kulujen jahtiin.</li>
+        </ul>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    const sampleData = {
+      days: 10,
+      dailyKwh: [18.2, 16.9, 19.4, 17.8, 20.1, 18.6, 16.2, 17.1, 19.0, 18.4],
+      baseLoadW: 220,
+      devices: [
+        { name: "Lämmin vesi", kwh: 42.5 },
+        { name: "Keittiö", kwh: 18.1 },
+        { name: "Viihde & TV", kwh: 12.6 },
+        { name: "Työhuone", kwh: 10.9 },
+        { name: "Muut pistorasiat", kwh: 9.7 },
+      ],
+      hourlyAvgKwh: [
+        0.32,0.30,0.29,0.28,0.30,0.35,
+        0.55,0.72,0.60,0.50,0.46,0.44,
+        0.45,0.48,0.52,0.58,0.70,0.88,
+        0.92,0.80,0.65,0.50,0.40,0.35
+      ]
+    };
+
+    const sum = arr => arr.reduce((a,b)=>a+b,0);
+    const round1 = n => Math.round(n*10)/10;
+
+    function animateNumber(el, to, duration=900){
+      const start = 0;
+      const t0 = performance.now();
+      function tick(t){
+        const p = Math.min(1, (t - t0) / duration);
+        const eased = 1 - Math.pow(1-p, 3);
+        const val = start + (to - start) * eased;
+        el.textContent = round1(val);
+        if(p < 1) requestAnimationFrame(tick);
+      }
+      requestAnimationFrame(tick);
+    }
+
+    const total = sum(sampleData.dailyKwh);
+    const avg = total / sampleData.days;
+
+    animateNumber(document.getElementById("totalKwh"), total);
+    animateNumber(document.getElementById("avgKwh"), avg);
+    animateNumber(document.getElementById("baseLoad"), sampleData.baseLoadW);
+
+    document.getElementById("avgDayHint").textContent =
+      `Vastaa noin ${round1(avg)} kWh päivässä (${sampleData.days} päivän data).`;
+
+    const barList = document.getElementById("barList");
+    const maxKwh = Math.max(...sampleData.devices.map(d => d.kwh));
+
+    sampleData.devices.forEach(d => {
+      const row = document.createElement("div");
+      row.className = "bar-row";
+
+      const name = document.createElement("div");
+      name.className = "name";
+      name.textContent = d.name;
+
+      const bar = document.createElement("div");
+      bar.className = "bar";
+      const fill = document.createElement("span");
+      bar.appendChild(fill);
+
+      const value = document.createElement("div");
+      value.className = "value";
+      value.textContent = `${round1(d.kwh)} kWh`;
+
+      row.appendChild(name);
+      row.appendChild(bar);
+      row.appendChild(value);
+      barList.appendChild(row);
+
+      requestAnimationFrame(()=> {
+        const pct = Math.max(2, (d.kwh / maxKwh) * 100);
+        fill.style.width = pct + "%";
+      });
+    });
+
+    const linePath = document.getElementById("linePath");
+    const lineGlow = document.getElementById("lineGlow");
+    const gridLines = document.getElementById("gridLines");
+
+    const W = 520, H = 220;
+    const PAD = {l:28, r:14, t:14, b:26};
+    const innerW = W - PAD.l - PAD.r;
+    const innerH = H - PAD.t - PAD.b;
+
+    const data = sampleData.hourlyAvgKwh;
+    const yMax = Math.max(...data) * 1.15;
+
+    for(let i=0;i<=4;i++){
+      const y = PAD.t + (innerH * i/4);
+      const line = document.createElementNS("http://www.w3.org/2000/svg","line");
+      line.setAttribute("x1", PAD.l);
+      line.setAttribute("x2", W - PAD.r);
+      line.setAttribute("y1", y);
+      line.setAttribute("y2", y);
+      line.setAttribute("stroke", "rgba(255,255,255,0.06)");
+      gridLines.appendChild(line);
+    }
+
+    function xy(i, v){
+      const x = PAD.l + innerW * (i/(data.length-1));
+      const y = PAD.t + innerH * (1 - (v / yMax));
+      return [x,y];
+    }
+
+    function buildPath(){
+      let dStr = "";
+      data.forEach((v,i)=>{
+        const [x,y] = xy(i,v);
+        dStr += (i===0 ? "M" : "L") + x.toFixed(1) + " " + y.toFixed(1) + " ";
+      });
+      return dStr.trim();
+    }
+
+    const dStr = buildPath();
+    linePath.setAttribute("d", dStr);
+    lineGlow.setAttribute("d", dStr);
+
+    const len = linePath.getTotalLength();
+    linePath.style.strokeDasharray = len;
+    linePath.style.strokeDashoffset = len;
+
+    requestAnimationFrame(()=>{
+      linePath.style.transition = "stroke-dashoffset 1100ms cubic-bezier(.2,.8,.2,1)";
+      linePath.style.strokeDashoffset = "0";
+    });
+  </script>
+</body>
+</html>
