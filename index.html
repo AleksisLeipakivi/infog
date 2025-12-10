@@ -1,318 +1,674 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="fi">
 <head>
   <meta charset="utf-8" />
+  <title>Omakotitalon sähkönkulutus – Tapo-plugit</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Omakotitalon sähkönkulutus – 10 päivän infografiikka</title>
   <style>
-    :root{
-      --bg:#0b0f14;
-      --card:#121823;
-      --fg:#e9eef6;
-      --muted:#a6b3c4;
-      --accent:#6bb3ff;
-      --accent-2:#8bffcf;
-      --ring: rgba(107,179,255,.25);
-      --radius: 18px;
+    :root {
+      --bg: #05070b;
+      --bg-alt: #0b0f18;
+      --card: #111724;
+      --fg: #e5edf8;
+      --muted: #9aa7c1;
+      --accent: #5aa0ff;
+      --accent-soft: rgba(90,160,255,0.2);
+      --danger: #ff6b81;
+      --ring: rgba(90,160,255,0.5);
+      --border-subtle: rgba(255,255,255,0.06);
     }
-    *{box-sizing:border-box}
-    body{
-      margin:0; background:var(--bg); color:var(--fg);
-      font:16px/1.55 system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, sans-serif;
-    }
-    .wrap{max-width:980px; margin:0 auto; padding:28px 18px 60px;}
-    header{display:flex; flex-direction:column; gap:8px; margin-bottom:22px;}
-    h1{font-size:clamp(28px, 4vw, 40px); margin:0; letter-spacing:.2px;}
-    .sub{color:var(--muted); max-width:60ch;}
 
-    .grid{
-      display:grid; gap:14px;
-      grid-template-columns: repeat(12, 1fr);
-    }
-    .card{
-      background: linear-gradient(180deg, rgba(255,255,255,.02), transparent), var(--card);
-      border:1px solid rgba(255,255,255,.06);
-      border-radius:var(--radius);
-      padding:18px 18px 14px;
-      box-shadow: 0 0 0 1px rgba(255,255,255,.02), 0 14px 40px rgba(0,0,0,.35);
-    }
-    .kpi{grid-column: span 4;}
-    .wide{grid-column: span 12;}
-    .half{grid-column: span 6;}
+    * { box-sizing: border-box; }
 
-    .label{color:var(--muted); font-size:12px; letter-spacing:.08em; text-transform:uppercase;}
-    .big{
-      font-size: clamp(28px, 3.2vw, 34px);
-      font-weight: 700; margin-top:6px;
-      display:flex; align-items:baseline; gap:8px;
+    html, body {
+      margin: 0;
+      padding: 0;
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, Ubuntu, sans-serif;
+      background: radial-gradient(circle at top left, #101426, #05070b);
+      color: var(--fg);
     }
-    .unit{color:var(--muted); font-weight:500; font-size:.6em;}
-    .hint{color:var(--muted); font-size:13px;}
 
-    .bar-row{
-      display:grid; grid-template-columns: 140px 1fr 64px;
-      gap:10px; align-items:center; padding:8px 0;
-      border-bottom:1px dashed rgba(255,255,255,.06);
+    body {
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      padding: 24px;
     }
-    .bar-row:last-child{border-bottom:none;}
-    .bar{
-      height:10px; border-radius:999px;
-      background: rgba(255,255,255,.06);
-      overflow:hidden;
-      position:relative;
+
+    .page {
+      width: 100%;
+      max-width: 1100px;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
     }
-    .bar > span{
-      position:absolute; inset:0 auto 0 0;
-      width:0%;
-      background: linear-gradient(90deg, var(--accent), var(--accent-2));
-      border-radius:999px;
-      box-shadow: 0 0 0 1px var(--ring);
+
+    header {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      align-items: baseline;
+      justify-content: space-between;
+    }
+
+    header h1 {
+      font-size: clamp(1.6rem, 2.7vw, 2.1rem);
+      letter-spacing: 0.03em;
+      margin: 0;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    header h1 span.logo-dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 999px;
+      background: radial-gradient(circle at 30% 30%, #fff, #5aa0ff);
+      box-shadow: 0 0 12px rgba(90,160,255,0.8);
+    }
+
+    header p {
+      margin: 0;
+      font-size: 0.9rem;
+      color: var(--muted);
+      max-width: 520px;
+    }
+
+    .meta-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+      font-size: 0.8rem;
+      color: var(--muted);
+    }
+
+    .pill {
+      padding: 4px 10px;
+      border-radius: 999px;
+      border: 1px solid var(--border-subtle);
+      background: rgba(5,7,11,0.7);
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .pill-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 999px;
+      background: #32d673;
+      box-shadow: 0 0 8px rgba(50,214,115,0.9);
+    }
+
+    main {
+      display: grid;
+      grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr);
+      gap: 18px;
+    }
+
+    @media (max-width: 840px) {
+      body {
+        padding: 16px;
+      }
+      main {
+        grid-template-columns: minmax(0, 1fr);
+      }
+    }
+
+    .card {
+      background: radial-gradient(circle at top left, #151b2b, #0b0f18);
+      border-radius: 18px;
+      padding: 16px 16px 18px;
+      border: 1px solid var(--border-subtle);
+      box-shadow:
+        0 0 0 1px rgba(255,255,255,0.02),
+        0 22px 40px rgba(0,0,0,0.7);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .card::before {
+      content: "";
+      position: absolute;
+      inset: -40%;
+      background:
+        radial-gradient(circle at top right, rgba(90,160,255,0.23), transparent 60%),
+        radial-gradient(circle at bottom left, rgba(117,248,203,0.16), transparent 52%);
+      opacity: 0.4;
+      pointer-events: none;
+      mix-blend-mode: screen;
+    }
+
+    .card-inner {
+      position: relative;
+      z-index: 1;
+    }
+
+    .card-title-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: 12px;
+      margin-bottom: 10px;
+    }
+
+    .card-title {
+      font-size: 0.95rem;
+      text-transform: uppercase;
+      letter-spacing: 0.14em;
+      color: var(--muted);
+    }
+
+    .card-sub {
+      font-size: 0.8rem;
+      color: var(--muted);
+    }
+
+    .kpi-row {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0,1fr));
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+
+    @media (max-width: 640px) {
+      .kpi-row {
+        grid-template-columns: minmax(0,1fr);
+      }
+    }
+
+    .kpi {
+      border-radius: 14px;
+      padding: 10px 11px;
+      background: linear-gradient(135deg, rgba(10,16,28,0.9), rgba(20,28,44,0.95));
+      border: 1px solid rgba(255,255,255,0.05);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .kpi-label {
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.16em;
+      color: var(--muted);
+      margin-bottom: 4px;
+    }
+
+    .kpi-value {
+      font-size: 1.4rem;
+      font-weight: 600;
+      display: flex;
+      align-items: baseline;
+      gap: 4px;
+    }
+
+    .kpi-unit {
+      font-size: 0.8rem;
+      color: var(--muted);
+    }
+
+    .kpi-foot {
+      margin-top: 3px;
+      font-size: 0.75rem;
+      color: var(--muted);
+    }
+
+    .kpi-highlight {
+      color: var(--accent);
+      font-weight: 500;
+    }
+
+    .hint-text {
+      margin: 0 0 8px;
+      font-size: 0.8rem;
+      color: var(--muted);
+    }
+
+    /* Device bars */
+
+    .bars-wrap {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .bar-row {
+      display: grid;
+      grid-template-columns: minmax(0, 1.2fr) minmax(0, 2fr) auto;
+      gap: 8px;
+      align-items: center;
+      font-size: 0.8rem;
+    }
+
+    @media (max-width: 700px) {
+      .bar-row {
+        grid-template-columns: minmax(0,1fr) minmax(0,1.5fr);
+        grid-template-rows: auto auto;
+      }
+      .bar-row .value {
+        grid-column: 1 / -1;
+        justify-self: flex-end;
+        font-size: 0.75rem;
+      }
+    }
+
+    .bar-row .name {
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .bar-row .bar {
+      position: relative;
+      height: 9px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.05);
+      overflow: hidden;
+    }
+
+    .bar-row .bar span {
+      position: absolute;
+      inset: 0;
+      width: 0%;
+      border-radius: inherit;
+      background: linear-gradient(90deg, #5aa0ff, #75f8cb);
+      box-shadow: 0 0 14px rgba(90,160,255,0.7);
       transition: width 900ms cubic-bezier(.2,.8,.2,1);
     }
 
-    .section-title{
-      display:flex; align-items:center; justify-content:space-between;
-      margin:0 0 10px 0;
+    .bar-row .value {
+      font-variant-numeric: tabular-nums;
+      color: var(--muted);
     }
-    .section-title h2{font-size:18px; margin:0;}
 
-    @media (max-width: 900px){
-      .kpi{grid-column: span 6;}
-      .half{grid-column: span 12;}
+    /* Line chart card */
+
+    .chart-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: 10px;
+      margin-bottom: 6px;
     }
-    @media (max-width: 520px){
-      .kpi{grid-column: span 12;}
-      .bar-row{grid-template-columns: 1fr;}
-      .bar-row .name{font-weight:600;}
-      .bar-row .value{justify-self:start;}
+
+    .chart-label {
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 0.15em;
+      color: var(--muted);
     }
+
+    .chart-legend {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      font-size: 0.75rem;
+      color: var(--muted);
+    }
+
+    .legend-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 3px 8px;
+      border-radius: 999px;
+      background: rgba(5,7,11,0.8);
+      border: 1px solid rgba(255,255,255,0.04);
+    }
+
+    .legend-dot {
+      width: 9px;
+      height: 9px;
+      border-radius: 999px;
+      background: linear-gradient(135deg, #5aa0ff, #75f8cb);
+      box-shadow: 0 0 10px rgba(90,160,255,0.8);
+    }
+
+    .chart-frame {
+      position: relative;
+      border-radius: 14px;
+      overflow: hidden;
+      border: 1px solid rgba(255,255,255,0.07);
+      background: radial-gradient(circle at top left, #151b2b, #05070b);
+    }
+
+    .chart-frame svg {
+      display: block;
+      width: 100%;
+      height: auto;
+    }
+
+    .chart-footer {
+      margin-top: 6px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      font-size: 0.75rem;
+      color: var(--muted);
+    }
+
+    .chart-footer strong {
+      color: var(--accent);
+      font-weight: 500;
+    }
+
+    .tag-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      font-size: 0.75rem;
+      color: var(--muted);
+    }
+
+    .tag {
+      padding: 3px 8px;
+      border-radius: 999px;
+      border: 1px solid rgba(255,255,255,0.06);
+      background: rgba(5,7,11,0.8);
+    }
+
   </style>
 </head>
 <body>
-  <div class="wrap">
+  <div class="page">
     <header>
-      <div class="label">Omakotitalon energiatarina</div>
-      <h1>10 päivän sähkönkulutus tiiviinä datatarinana</h1>
-      <div class="sub">
-        Työnäytepohja tiedon visualisointiin. Korvaa esimerkkidata omalla Tapo- tai Home Assistant -datalla.
+      <div>
+        <h1>
+          <span class="logo-dot"></span>
+          Omakotitalon sähkönkulutus
+        </h1>
+        <p>
+          Laitetasoinen näkymä Tapo-älypistorasioista mitattuun energiankulutukseen.
+          Visualisointi päivittyy suoraan JSON-datasta (<code>energy.real.json</code>).
+        </p>
+      </div>
+      <div class="meta-row">
+        <span class="pill">
+          <span class="pill-dot"></span>
+          <span id="metaPeriod">Päivänäkymä (Tapo)</span>
+        </span>
+        <span>Data: paikallinen Tapo API</span>
       </div>
     </header>
 
-    <section class="grid">
-      <div class="card kpi">
-        <div class="label">Kokonaiskulutus</div>
-        <div class="big"><span id="totalKwh">0</span><span class="unit">kWh / 10 pv</span></div>
-        <div class="hint" id="avgDayHint"></div>
-      </div>
+    <main>
+      <!-- Left: summary + device breakdown -->
+      <section class="card">
+        <div class="card-inner">
+          <div class="card-title-row">
+            <div class="card-title">Yhteenveto</div>
+            <div class="card-sub" id="metaGenerated"></div>
+          </div>
 
-      <div class="card kpi">
-        <div class="label">Keskimääräinen päivä</div>
-        <div class="big"><span id="avgKwh">0</span><span class="unit">kWh / pv</span></div>
-        <div class="hint">Hyvä vertailuluku talven ja kesän välillä.</div>
-      </div>
+          <div class="kpi-row">
+            <div class="kpi">
+              <div class="kpi-label">Kokonaiskulutus</div>
+              <div class="kpi-value">
+                <span id="totalKwh">0.0</span>
+                <span class="kpi-unit">kWh</span>
+              </div>
+              <div class="kpi-foot">Kaikki mitatut laitteet yhteensä.</div>
+            </div>
 
-      <div class="card kpi">
-        <div class="label">Peruskuorma-arvio</div>
-        <div class="big"><span id="baseLoad">0</span><span class="unit">W</span></div>
-        <div class="hint">Arvio yöajan pienimmistä tuntikeskiarvoista.</div>
-      </div>
+            <div class="kpi">
+              <div class="kpi-label">Keskiarvo / päivä</div>
+              <div class="kpi-value">
+                <span id="avgKwh">0.0</span>
+                <span class="kpi-unit">kWh</span>
+              </div>
+              <div class="kpi-foot" id="avgDayHint">
+                Ladataan dataa…
+              </div>
+            </div>
 
-      <div class="card half">
-        <div class="section-title">
-          <h2>Top-laitteet</h2>
-          <span class="label">osuus 10 pv</span>
+            <div class="kpi">
+              <div class="kpi-label">Peruskuorma</div>
+              <div class="kpi-value">
+                <span id="baseLoad">0</span>
+                <span class="kpi-unit">W</span>
+              </div>
+              <div class="kpi-foot">
+                Arvio jatkuvasta taustakuormasta.
+              </div>
+            </div>
+          </div>
+
+          <p class="hint-text">
+            Alla näkyy laitetasoinen energianjako. Palkin pituus suhteutettu
+            eniten kuluttavaan laitteeseen.
+          </p>
+
+          <div class="bars-wrap" id="barList">
+            <!-- täytetään datasta -->
+          </div>
         </div>
-        <div id="barList"></div>
-      </div>
+      </section>
 
-      <div class="card half">
-        <div class="section-title">
-          <h2>Päivärytmi (24h keskiarvo)</h2>
-          <span class="label">kWh / tunti</span>
-        </div>
-        <svg id="lineSvg" viewBox="0 0 520 220" width="100%" height="220" role="img" aria-label="Sähkönkulutuksen 24 tunnin keskiarvokäyrä">
-          <rect x="0" y="0" width="520" height="220" fill="transparent"></rect>
-          <g id="gridLines"></g>
-          <path id="linePath" d="" fill="none" stroke="currentColor" stroke-width="3" style="color: var(--accent)"></path>
-          <path id="lineGlow" d="" fill="none" stroke="currentColor" stroke-width="8" opacity="0.10" style="color: var(--accent)"></path>
-        </svg>
-        <div class="hint">Tavoite: tehdä kulutuksen piikit nopeasti ymmärrettäviksi.</div>
-      </div>
+      <!-- Right: hourly profile + notes -->
+      <section class="card">
+        <div class="card-inner">
+          <div class="card-title-row">
+            <div class="card-title">Vuorokauden rytmi</div>
+          </div>
 
-      <div class="card wide">
-        <div class="section-title">
-          <h2>3 havaintoa ja toimenpide-ideaa</h2>
+          <div class="chart-header">
+            <div class="chart-label">Tuntikohtainen energiankäyttö (kWh)</div>
+            <div class="chart-legend">
+              <span class="legend-pill">
+                <span class="legend-dot"></span>
+                Tuntiprofiili
+              </span>
+            </div>
+          </div>
+
+          <div class="chart-frame">
+            <svg viewBox="0 0 520 220" preserveAspectRatio="none">
+              <g id="gridLines"></g>
+              <path id="lineGlow" fill="none" stroke="rgba(90,160,255,0.35)" stroke-width="5" stroke-linecap="round"/>
+              <path id="linePath" fill="none" stroke="url(#lineGradient)" stroke-width="2.2" stroke-linecap="round"/>
+              <defs>
+                <linearGradient id="lineGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                  <stop offset="0%" stop-color="#5aa0ff" />
+                  <stop offset="100%" stop-color="#75f8cb" />
+                </linearGradient>
+              </defs>
+            </svg>
+          </div>
+
+          <div class="chart-footer">
+            <span>
+              Jos tuntidata puuttuu, käyrä piirtyy nollatasolle.
+            </span>
+            <span>
+              <strong>Vinkki:</strong> yhdistä tähän pörssisähkön tuntihinnat
+              ja käytä samaa JSON-rakennetta.
+            </span>
+          </div>
+
+          <div class="tag-row" style="margin-top:10px;">
+            <span class="tag">Lähde: Tapo P110</span>
+            <span class="tag" id="tagPeriod">period_days: 1</span>
+            <span class="tag">JSON: energy.real.json</span>
+          </div>
         </div>
-        <ul class="hint" style="margin-top:0">
-          <li><strong>Peruskuorma:</strong> jos arvo tuntuu korkealta, etsi aina päällä olevat laitteet ja ajastettavat kuormat.</li>
-          <li><strong>Aamupiikki:</strong> yhdistä lämpö, keittiö ja lämmin vesi samaan tarinaan ja testaa porrastusta.</li>
-          <li><strong>Viihde/työhuone:</strong> Tapo-pistorasiat sopivat hyvin “pienten mutta jatkuvien” kulujen jahtiin.</li>
-        </ul>
-      </div>
-    </section>
+      </section>
+    </main>
   </div>
 
- <script>
-  // Data source (swap to real data later)
-  const DATA_URL = "data/energy.sample.json";
+  <script>
+    const DATA_URL = "data/energy.real.json";
 
-  const sum = arr => arr.reduce((a,b)=>a+b,0);
-  const round1 = n => Math.round(n*10)/10;
+    const sum = arr => arr.reduce((a,b)=>a+b,0);
+    const round1 = n => Math.round(n*10)/10;
 
-  function animateNumber(el, to, duration=900){
-    const start = 0;
-    const t0 = performance.now();
-    function tick(t){
-      const p = Math.min(1, (t - t0) / duration);
-      const eased = 1 - Math.pow(1-p, 3);
-      const val = start + (to - start) * eased;
-      el.textContent = round1(val);
-      if(p < 1) requestAnimationFrame(tick);
-    }
-    requestAnimationFrame(tick);
-  }
-
-  function render(data){
-    const days = data?.meta?.period_days ?? (data.daily_kwh?.length ?? 0);
-    const daily = data.daily_kwh ?? [];
-    const devices = data.devices ?? [];
-    const hourly = data.hourly_avg_kwh ?? [];
-    const baseLoadW = data?.summary?.base_load_w ?? 0;
-
-    // --- KPIs ---
-    const total = sum(daily);
-    const avg = days ? (total / days) : 0;
-
-    animateNumber(document.getElementById("totalKwh"), total);
-    animateNumber(document.getElementById("avgKwh"), avg);
-    animateNumber(document.getElementById("baseLoad"), baseLoadW);
-
-    const avgHint = document.getElementById("avgDayHint");
-    if (avgHint){
-      avgHint.textContent = days
-        ? `Vastaa noin ${round1(avg)} kWh päivässä (${days} päivän data).`
-        : "Ei dataa.";
+    function animateNumber(el, to, duration=900){
+      if (!el) return;
+      const start = 0;
+      const t0 = performance.now();
+      function tick(t){
+        const p = Math.min(1, (t - t0) / duration);
+        const eased = 1 - Math.pow(1-p, 3);
+        const val = start + (to - start) * eased;
+        el.textContent = round1(val);
+        if(p < 1) requestAnimationFrame(tick);
+      }
+      requestAnimationFrame(tick);
     }
 
-    // --- Bars ---
-    const barList = document.getElementById("barList");
-    if (barList){
-      barList.innerHTML = "";
-      const maxKwh = Math.max(1, ...devices.map(d => d.kwh || 0));
+    function render(data){
+      const periodDays = data?.meta?.period_days ?? (data.daily_kwh?.length ?? 0);
+      const daily = data.daily_kwh || [];
+      const devices = data.devices || [];
+      const hourly = data.hourly_avg_kwh || [];
+      const baseLoadW = data?.summary?.base_load_w ?? 0;
 
-      devices.forEach(d => {
-        const row = document.createElement("div");
-        row.className = "bar-row";
+      const total = sum(daily);
+      const avg = periodDays ? (total / periodDays) : 0;
 
-        const name = document.createElement("div");
-        name.className = "name";
-        name.textContent = d.name ?? "Nimetön laite";
+      animateNumber(document.getElementById("totalKwh"), total);
+      animateNumber(document.getElementById("avgKwh"), avg);
+      animateNumber(document.getElementById("baseLoad"), baseLoadW);
 
-        const bar = document.createElement("div");
-        bar.className = "bar";
-        const fill = document.createElement("span");
-        bar.appendChild(fill);
-
-        const value = document.createElement("div");
-        value.className = "value";
-        value.textContent = `${round1(d.kwh ?? 0)} kWh`;
-
-        row.appendChild(name);
-        row.appendChild(bar);
-        row.appendChild(value);
-        barList.appendChild(row);
-
-        requestAnimationFrame(()=> {
-          const pct = Math.max(2, ((d.kwh ?? 0) / maxKwh) * 100);
-          fill.style.width = pct + "%";
-        });
-      });
-    }
-
-    // --- Line chart (SVG) ---
-    const linePath = document.getElementById("linePath");
-    const lineGlow = document.getElementById("lineGlow");
-    const gridLines = document.getElementById("gridLines");
-
-    if (linePath && lineGlow && gridLines){
-      // Clear old grid
-      gridLines.innerHTML = "";
-
-      const W = 520, H = 220;
-      const PAD = {l:28, r:14, t:14, b:26};
-      const innerW = W - PAD.l - PAD.r;
-      const innerH = H - PAD.t - PAD.b;
-
-      const dataArr = hourly.length ? hourly : new Array(24).fill(0);
-      const yMax = Math.max(...dataArr, 0.01) * 1.15;
-
-      for(let i=0;i<=4;i++){
-        const y = PAD.t + (innerH * i/4);
-        const line = document.createElementNS("http://www.w3.org/2000/svg","line");
-        line.setAttribute("x1", PAD.l);
-        line.setAttribute("x2", W - PAD.r);
-        line.setAttribute("y1", y);
-        line.setAttribute("y2", y);
-        line.setAttribute("stroke", "rgba(255,255,255,0.06)");
-        gridLines.appendChild(line);
+      const avgHint = document.getElementById("avgDayHint");
+      if (avgHint){
+        if (periodDays && periodDays > 1){
+          avgHint.textContent = `Vastaa noin ${round1(avg)} kWh päivässä (${periodDays} päivän data).`;
+        } else if (periodDays === 1) {
+          avgHint.textContent = "Yhden päivän mittaus – hyvä nykytilannekuva, ei vielä trendi.";
+        } else {
+          avgHint.textContent = "Ei päivittäistä aikasarjaa – näkymä kuvaa tämän hetken laitetasoa.";
+        }
       }
 
-      function xy(i, v){
-        const x = PAD.l + innerW * (i/(dataArr.length-1 || 1));
-        const y = PAD.t + innerH * (1 - (v / yMax));
-        return [x,y];
+      const metaGen = document.getElementById("metaGenerated");
+      if (metaGen && data.meta?.generated_at){
+        metaGen.textContent = `Päivitetty: ${data.meta.generated_at}`;
       }
 
-      function buildPath(){
+      const metaPeriod = document.getElementById("metaPeriod");
+      if (metaPeriod){
+        metaPeriod.textContent = periodDays
+          ? `Mittausjakso: ${periodDays} päivää`
+          : "Päivänäkymä (Tapo, laitetaso)";
+      }
+
+      const tagPeriod = document.getElementById("tagPeriod");
+      if (tagPeriod){
+        tagPeriod.textContent = `period_days: ${periodDays || 0}`;
+      }
+
+      // Device bars
+      const barList = document.getElementById("barList");
+      if (barList){
+        barList.innerHTML = "";
+        if (!devices.length){
+          const p = document.createElement("p");
+          p.className = "hint-text";
+          p.textContent = "Ei laitekohtaista dataa (devices-array tyhjä).";
+          barList.appendChild(p);
+        } else {
+          const maxKwh = Math.max(1, ...devices.map(d => d.kwh || 0));
+          devices.forEach(d => {
+            const row = document.createElement("div");
+            row.className = "bar-row";
+
+            const name = document.createElement("div");
+            name.className = "name";
+            name.textContent = d.name ?? "Laitenimi puuttuu";
+
+            const bar = document.createElement("div");
+            bar.className = "bar";
+            const fill = document.createElement("span");
+            bar.appendChild(fill);
+
+            const value = document.createElement("div");
+            value.className = "value";
+            value.textContent = `${round1(d.kwh ?? 0)} kWh`;
+
+            row.appendChild(name);
+            row.appendChild(bar);
+            row.appendChild(value);
+            barList.appendChild(row);
+
+            requestAnimationFrame(()=> {
+              const pct = Math.max(3, ((d.kwh ?? 0) / maxKwh) * 100);
+              fill.style.width = pct + "%";
+            });
+          });
+        }
+      }
+
+      // Line chart
+      const linePath = document.getElementById("linePath");
+      const lineGlow = document.getElementById("lineGlow");
+      const gridLines = document.getElementById("gridLines");
+
+      if (linePath && lineGlow && gridLines){
+        gridLines.innerHTML = "";
+
+        const W = 520, H = 220;
+        const PAD = {l:28, r:14, t:14, b:26};
+        const innerW = W - PAD.l - PAD.r;
+        const innerH = H - PAD.t - PAD.b;
+
+        const dataArr = (hourly && hourly.length) ? hourly : new Array(24).fill(0);
+        const yMax = Math.max(...dataArr, 0.01) * 1.15;
+
+        for(let i=0;i<=4;i++){
+          const y = PAD.t + (innerH * i/4);
+          const line = document.createElementNS("http://www.w3.org/2000/svg","line");
+          line.setAttribute("x1", PAD.l);
+          line.setAttribute("x2", W - PAD.r);
+          line.setAttribute("y1", y);
+          line.setAttribute("y2", y);
+          line.setAttribute("stroke", "rgba(255,255,255,0.06)");
+          gridLines.appendChild(line);
+        }
+
+        function xy(i, v){
+          const x = PAD.l + innerW * (i/(dataArr.length-1 || 1));
+          const y = PAD.t + innerH * (1 - (v / yMax));
+          return [x,y];
+        }
+
         let dStr = "";
         dataArr.forEach((v,i)=>{
           const [x,y] = xy(i,v);
           dStr += (i===0 ? "M" : "L") + x.toFixed(1) + " " + y.toFixed(1) + " ";
         });
-        return dStr.trim();
+
+        linePath.setAttribute("d", dStr.trim());
+        lineGlow.setAttribute("d", dStr.trim());
+
+        const len = linePath.getTotalLength();
+        linePath.style.strokeDasharray = len;
+        linePath.style.strokeDashoffset = len;
+
+        requestAnimationFrame(()=>{
+          linePath.style.transition = "stroke-dashoffset 1100ms cubic-bezier(.2,.8,.2,1)";
+          linePath.style.strokeDashoffset = "0";
+        });
       }
-
-      const dStr = buildPath();
-      linePath.setAttribute("d", dStr);
-      lineGlow.setAttribute("d", dStr);
-
-      // path draw animation
-      const len = linePath.getTotalLength();
-      linePath.style.strokeDasharray = len;
-      linePath.style.strokeDashoffset = len;
-
-      requestAnimationFrame(()=>{
-        linePath.style.transition = "stroke-dashoffset 1100ms cubic-bezier(.2,.8,.2,1)";
-        linePath.style.strokeDashoffset = "0";
-      });
     }
-  }
 
-  async function init(){
-    try{
-      const res = await fetch(DATA_URL, { cache: "no-store" });
-      if(!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = await res.json();
-      render(data);
-    }catch(err){
-      console.error("Data load failed:", err);
-
-      // Fallback minimal render
-      render({
-        meta: { period_days: 0 },
-        summary: { base_load_w: 0 },
-        daily_kwh: [],
-        devices: [],
-        hourly_avg_kwh: []
-      });
-
-      const avgHint = document.getElementById("avgDayHint");
-      if (avgHint) avgHint.textContent = "Datan lataus epäonnistui.";
+    async function init(){
+      try{
+        const res = await fetch(DATA_URL, { cache: "no-store" });
+        if(!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+        render(data);
+      }catch(err){
+        console.error("Data load failed:", err);
+        const avgHint = document.getElementById("avgDayHint");
+        if (avgHint) avgHint.textContent = "Datan lataus epäonnistui (tarkista energy.real.json).";
+      }
     }
-  }
 
-  init();
-</script>
-
+    init();
+  </script>
 </body>
 </html>
