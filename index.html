@@ -129,6 +129,21 @@
     color: #ff8080;
     margin-top: 20px;
   }
+  
+.axes .grid {
+  stroke: rgba(255,255,255,0.06);
+  stroke-width: 1;
+}
+
+.axes .tick {
+  stroke: rgba(255,255,255,0.18);
+  stroke-width: 1;
+}
+
+.axis-label {
+  fill: rgba(232,239,245,0.6);
+  font-size: 11px;
+}
 
 </style>
 </head>
@@ -252,20 +267,72 @@ function renderLineChart(arr) {
   const svg = document.getElementById("linechart");
   const W = svg.clientWidth;
   const H = svg.clientHeight;
-  svg.innerHTML = "";
+  const PAD = 32;
 
+  svg.innerHTML = "";
   if (!arr.length) return;
 
   const max = Math.max(...arr);
   const min = Math.min(...arr);
 
+  const NS = "http://www.w3.org/2000/svg";
+
+  // ===== AXES GROUP =====
+  const axes = document.createElementNS(NS, "g");
+  axes.setAttribute("class", "axes");
+
+  // Y-axis ticks (0%, 50%, 100%)
+  [0, 0.5, 1].forEach(t => {
+    const y = PAD + (1 - t) * (H - 2 * PAD);
+
+    const grid = document.createElementNS(NS, "line");
+    grid.setAttribute("x1", PAD);
+    grid.setAttribute("x2", W - PAD);
+    grid.setAttribute("y1", y);
+    grid.setAttribute("y2", y);
+    grid.setAttribute("class", "grid");
+    axes.appendChild(grid);
+
+    const label = document.createElementNS(NS, "text");
+    label.setAttribute("x", PAD - 6);
+    label.setAttribute("y", y + 4);
+    label.setAttribute("text-anchor", "end");
+    label.setAttribute("class", "axis-label");
+    label.textContent = (max * t).toFixed(1);
+    axes.appendChild(label);
+  });
+
+  // X-axis ticks (0, 6, 12, 18, 23)
+  [0, 6, 12, 18, 23].forEach(h => {
+    const x = PAD + (h / 23) * (W - 2 * PAD);
+
+    const tick = document.createElementNS(NS, "line");
+    tick.setAttribute("x1", x);
+    tick.setAttribute("x2", x);
+    tick.setAttribute("y1", H - PAD);
+    tick.setAttribute("y2", H - PAD + 6);
+    tick.setAttribute("class", "tick");
+    axes.appendChild(tick);
+
+    const label = document.createElementNS(NS, "text");
+    label.setAttribute("x", x);
+    label.setAttribute("y", H - PAD + 18);
+    label.setAttribute("text-anchor", "middle");
+    label.setAttribute("class", "axis-label");
+    label.textContent = String(h).padStart(2, "0");
+    axes.appendChild(label);
+  });
+
+  svg.appendChild(axes);
+
+  // ===== LINE =====
   const pts = arr.map((v, i) => {
-    const x = (i / (arr.length - 1)) * W;
-    const y = H - ((v - min) / (max - min + 0.0001)) * H;
+    const x = PAD + (i / (arr.length - 1)) * (W - 2 * PAD);
+    const y = PAD + (1 - (v - min) / (max - min + 0.0001)) * (H - 2 * PAD);
     return `${x},${y}`;
   }).join(" ");
 
-  const poly = document.createElementNS("http://www.w3.org/2000/svg", "polyline");
+  const poly = document.createElementNS(NS, "polyline");
   poly.setAttribute("points", pts);
   poly.setAttribute("stroke", "var(--accent)");
   poly.setAttribute("fill", "none");
